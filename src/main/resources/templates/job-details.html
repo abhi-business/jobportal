@@ -301,6 +301,21 @@
                   <button class="btn-sec btn-black w-100" type="submit">
                     Delete Job
                   </button>
+                  <div>
+                    <h5>Is Job Active</h5>
+
+                    <!-- <label class="toggle-switch"> -->
+                      <input
+                        type="checkbox"
+                        id="jobActiveToggle"
+                        th:checked="${jobDetails.isActive}"
+                        th:data-job-id="${jobDetails.jobPostId}"
+                        onchange="toggleJobStatus(this)"
+                      />
+
+                      <span class="slider"></span>
+                    </label>
+                  </div>
                 </form>
               </div>
             </div>
@@ -322,13 +337,29 @@
       th:src="@{/webjars/bootstrap/js/bootstrap.min.js}"
     ></script>
     <script type="text/javascript" th:src="@{/js/main.js}"></script>
-    <script>
-      var element = document.getElementById("back-link");
-      element.setAttribute("href", document.referrer);
-      element.onclick = function () {
-        history.back();
-        return false;
-      };
-    </script>
+    
+    <!-- is active -->
+     <script>
+    function toggleJobStatus(checkbox) {
+        const jobId = checkbox.getAttribute("data-job-id");
+        const newStatus = checkbox.checked;
+
+        fetch(`/dashboard/update-status/${jobId}?active=${newStatus}`, {
+            method: 'PUT'
+        })
+        .then(response => {
+            if (!response.ok) {
+                alert("Update failed!");
+                checkbox.checked = !newStatus; // rollback switch
+            }
+        })
+        .catch(error => {
+            alert("Error updating status!");
+            console.error(error);
+            checkbox.checked = !newStatus;
+        });
+    }
+</script>
+
   </body>
 </html>

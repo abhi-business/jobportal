@@ -1,10 +1,14 @@
 package com.searchjob.jobportal.controller;
 
 import com.searchjob.jobportal.entity.*;
+import com.searchjob.jobportal.repository.JobPostActivityRepository;
 import com.searchjob.jobportal.service.JobPostActivityService;
 import com.searchjob.jobportal.service.JobSeekerApplyService;
 import com.searchjob.jobportal.service.JobSeekerSaveService;
 import com.searchjob.jobportal.service.UsersService;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -12,16 +16,21 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Controller
 public class JobPostActivityController {
@@ -30,13 +39,16 @@ public class JobPostActivityController {
     private final JobPostActivityService jobPostActivityService;
     private final JobSeekerApplyService jobSeekerApplyService;
     private final JobSeekerSaveService jobSeekerSaveService;
+    private final JobPostActivityRepository jobPostActivityRepository;
 
     public JobPostActivityController(UsersService usersService, JobPostActivityService jobPostActivityService,
-            JobSeekerApplyService jobSeekerApplyService, JobSeekerSaveService jobSeekerSaveService) {
+            JobSeekerApplyService jobSeekerApplyService, JobSeekerSaveService jobSeekerSaveService,
+            JobPostActivityRepository jobPostActivityRepository) {
         this.usersService = usersService;
         this.jobPostActivityService = jobPostActivityService;
         this.jobSeekerApplyService = jobSeekerApplyService;
         this.jobSeekerSaveService = jobSeekerSaveService;
+        this.jobPostActivityRepository = jobPostActivityRepository;
     }
 
     @GetMapping("/dashboard/")
@@ -51,17 +63,15 @@ public class JobPostActivityController {
             @RequestParam(value = "partialRemote", required = false) String partialRemote,
             @RequestParam(value = "today", required = false) boolean today,
             @RequestParam(value = "days7", required = false) boolean days7,
-            @RequestParam(value = "days30", required = false) boolean days30
-
-    ) {
+            @RequestParam(value = "days30", required = false) boolean days30) {
 
         model.addAttribute("partTime", Objects.equals(partTime, "Part-Time"));
         model.addAttribute("fullTime", Objects.equals(partTime, "Full-Time"));
         model.addAttribute("freelance", Objects.equals(partTime, "Freelance"));
 
-        model.addAttribute("remoteOnly", Objects.equals(partTime, "Remote-Only"));
-        model.addAttribute("officeOnly", Objects.equals(partTime, "Office-Only"));
-        model.addAttribute("partialRemote", Objects.equals(partTime, "Partial-Remote"));
+        model.addAttribute("remoteOnly", Objects.equals(remoteOnly, "Remote-Only"));
+        model.addAttribute("officeOnly", Objects.equals(officeOnly, "Office-Only"));
+        model.addAttribute("partialRemote", Objects.equals(partialRemote, "Partial-Remote"));
 
         model.addAttribute("today", today);
         model.addAttribute("days7", days7);
@@ -103,7 +113,8 @@ public class JobPostActivityController {
         if (!dateSearchFlag && !remote && !type && !StringUtils.hasText(job) && !StringUtils.hasText(location)) {
             jobPost = jobPostActivityService.getAll();
         } else {
-            jobPost = jobPostActivityService.search(job, location, Arrays.asList(partTime, fullTime, freelance),
+            jobPost = jobPostActivityService.search(job, location,
+                    Arrays.asList(partTime, fullTime, freelance),
                     Arrays.asList(remoteOnly, officeOnly, partialRemote), searchDate);
         }
 
@@ -113,11 +124,17 @@ public class JobPostActivityController {
         if (!(authentication instanceof AnonymousAuthenticationToken)) {
             String currentUsername = authentication.getName();
             model.addAttribute("username", currentUsername);
+
             if (authentication.getAuthorities().contains(new SimpleGrantedAuthority("Recruiter"))) {
                 List<RecruiterJobsDto> recruiterJobs = jobPostActivityService
                         .getRecruiterJobs(((RecruiterProfile) currentUserProfile).getUserAccountId());
                 model.addAttribute("jobPost", recruiterJobs);
             } else {
+                // 💥 Filter out inactive jobs
+                List<JobPostActivity> activeJobsOnly = jobPost.stream()
+                        .filter(JobPostActivity::getIsActive)
+                        .collect(Collectors.toList());
+
                 List<JobSeekerApply> jobSeekerApplyList = jobSeekerApplyService
                         .getCandidatesJobs((JobSeekerProfile) currentUserProfile);
                 List<JobSeekerSave> jobSeekerSaveList = jobSeekerSaveService
@@ -126,9 +143,10 @@ public class JobPostActivityController {
                 boolean exist;
                 boolean saved;
 
-                for (JobPostActivity jobActivity : jobPost) {
+                for (JobPostActivity jobActivity : activeJobsOnly) {
                     exist = false;
                     saved = false;
+
                     for (JobSeekerApply jobSeekerApply : jobSeekerApplyList) {
                         if (Objects.equals(jobActivity.getJobPostId(), jobSeekerApply.getJob().getJobPostId())) {
                             jobActivity.setIsActive(true);
@@ -151,15 +169,14 @@ public class JobPostActivityController {
                     if (!saved) {
                         jobActivity.setIsSaved(false);
                     }
-
-                    model.addAttribute("jobPost", jobPost);
-
                 }
+
+                // ✅ Send filtered list to view
+                model.addAttribute("jobPost", activeJobsOnly);
             }
         }
 
         model.addAttribute("user", currentUserProfile);
-
         return "dashboard";
     }
 
@@ -248,17 +265,40 @@ public class JobPostActivityController {
             jobPostActivity.setPostedById(user);
         }
         jobPostActivity.setPostedDate(new Date());
+        jobPostActivity.setIsActive(true);
         model.addAttribute("jobPostActivity", jobPostActivity);
         JobPostActivity saved = jobPostActivityService.addNew(jobPostActivity);
         return "redirect:/dashboard/";
     }
 
-    @GetMapping("dashboard/edit/{id}")
+    // is active
+    @PutMapping("/dashboard/update-status/{id}")
+    @ResponseBody
+    public ResponseEntity<String> updateJobActiveStatus(@PathVariable("id") Integer id,
+            @RequestParam("active") boolean active) {
+        Optional<JobPostActivity> jobOpt = jobPostActivityRepository.findById(id);
+        if (jobOpt.isPresent()) {
+            JobPostActivity job = jobOpt.get();
+            job.setIsActive(active); // ⬅️ update active status
+            jobPostActivityRepository.save(job); // ⬅️ save updated
+            return ResponseEntity.ok("Status updated");
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Job not found");
+        }
+    }
+
+    @PostMapping("/dashboard/edit/{id}")
     public String editJob(@PathVariable("id") int id, Model model) {
 
         JobPostActivity jobPostActivity = jobPostActivityService.getOne(id);
         model.addAttribute("jobPostActivity", jobPostActivity);
         model.addAttribute("user", usersService.getCurrentUserProfile());
         return "add-jobs";
+    }
+
+    @PostMapping("/dashboard/deleteJob/{id}")
+    public String deleteJob(@PathVariable("id") int id, Model model) {
+        jobPostActivityService.deleteJob(id);
+        return "redirect:/dashboard/";
     }
 }
