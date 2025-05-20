@@ -5,6 +5,7 @@ import com.searchjob.jobportal.repository.JobPostActivityRepository;
 import com.searchjob.jobportal.service.JobPostActivityService;
 import com.searchjob.jobportal.service.JobSeekerApplyService;
 import com.searchjob.jobportal.service.JobSeekerSaveService;
+import com.searchjob.jobportal.service.NotificationService;
 import com.searchjob.jobportal.service.UsersService;
 
 import org.springframework.http.HttpStatus;
@@ -39,15 +40,17 @@ public class JobPostActivityController {
     private final JobSeekerApplyService jobSeekerApplyService;
     private final JobSeekerSaveService jobSeekerSaveService;
     private final JobPostActivityRepository jobPostActivityRepository;
+    private final NotificationService notificationService;
 
     public JobPostActivityController(UsersService usersService, JobPostActivityService jobPostActivityService,
             JobSeekerApplyService jobSeekerApplyService, JobSeekerSaveService jobSeekerSaveService,
-            JobPostActivityRepository jobPostActivityRepository) {
+            JobPostActivityRepository jobPostActivityRepository, NotificationService notificationService) {
         this.usersService = usersService;
         this.jobPostActivityService = jobPostActivityService;
         this.jobSeekerApplyService = jobSeekerApplyService;
         this.jobSeekerSaveService = jobSeekerSaveService;
         this.jobPostActivityRepository = jobPostActivityRepository;
+        this.notificationService = notificationService;
     }
 
     @GetMapping("/dashboard/")
@@ -128,6 +131,13 @@ public class JobPostActivityController {
                 List<RecruiterJobsDto> recruiterJobs = jobPostActivityService
                         .getRecruiterJobs(((RecruiterProfile) currentUserProfile).getUserAccountId());
                 model.addAttribute("jobPost", recruiterJobs);
+
+                RecruiterProfile recruiterProfile = (RecruiterProfile) currentUserProfile;
+                Users recruiterUser = recruiterProfile.getUserId();
+                // ✅ Add Notifications to model
+                List<Notification> notifications = notificationService.getUserNotifications(recruiterUser);
+                model.addAttribute("notifications", notifications);
+
             } else {
                 // 💥 Filter out inactive jobs
                 List<JobPostActivity> activeJobsOnly = jobPost.stream()

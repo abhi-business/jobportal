@@ -25,16 +25,19 @@ public class JobSeekerApplyController {
     private final JobSeekerSaveService jobSeekerSaveService;
     private final RecruiterProfileService recruiterProfileService;
     private final JobSeekerProfileService jobSeekerProfileService;
+    private final NotificationService notificationService;
 
     public JobSeekerApplyController(JobPostActivityService jobPostActivityService, UsersService usersService,
             JobSeekerApplyService jobSeekerApplyService, JobSeekerSaveService jobSeekerSaveService,
-            RecruiterProfileService recruiterProfileService, JobSeekerProfileService jobSeekerProfileService) {
+            RecruiterProfileService recruiterProfileService, JobSeekerProfileService jobSeekerProfileService,
+            NotificationService notificationService) {
         this.jobPostActivityService = jobPostActivityService;
         this.usersService = usersService;
         this.jobSeekerApplyService = jobSeekerApplyService;
         this.jobSeekerSaveService = jobSeekerSaveService;
         this.recruiterProfileService = recruiterProfileService;
         this.jobSeekerProfileService = jobSeekerProfileService;
+        this.notificationService = notificationService;
     }
 
     @GetMapping("job-details-apply/{id}")
@@ -97,6 +100,9 @@ public class JobSeekerApplyController {
                 throw new RuntimeException("User not found");
             }
             jobSeekerApplyService.addNew(jobSeekerApply);
+            Users recruiter = jobPostActivity.getPostedById(); // Recruiter of the job
+            String msg = "A new candidate has applied for: " + jobPostActivity.getJobTitle();
+            notificationService.sendNotification(recruiter, msg);
         }
 
         return "redirect:/dashboard/";

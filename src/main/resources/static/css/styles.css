@@ -477,11 +477,12 @@ mr-5 {
     transition: transform 0.3s;
 }
 
-/* Toggled state */
-.toggle-switch input:checked+.slider {
-    background-color: #4caf50;
-}
-
-.toggle-switch input:checked+.slider::before {
-    transform: translateX(26px);
+/* notification */
+.notification-icon {
+    position: fixed;
+    top: 100px;
+    right: 80px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
 }

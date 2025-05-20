@@ -299,6 +299,36 @@
 
         <div class="box" sec:authorize="hasAuthority('Recruiter')">
           <h1 class="primary-title">Recruiter Dashboard</h1>
+          <div class="notification-icons">
+            <li class="nav-item dropdown">
+              <a
+                class="nav-link dropdown-toggle"
+                href="#"
+                id="notificationDropdown"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                🔔 Notifications
+                <span id="notifCount" class="badge bg-danger ms-1">0</span>
+              </a>
+
+              <ul
+                class="dropdown-menu dropdown-menu-end"
+                aria-labelledby="notificationDropdown"
+                id="notifList"
+              >
+                <li class="dropdown-item text-muted">Loading...</li>
+                <br />
+                <li
+                  class="dropdown-item text-primary"
+                  onclick="markAllAsRead()"
+                >
+                  Mark all as read
+                </li>
+              </ul>
+            </li>
+          </div>
         </div>
         <div class="box mt-3">
           <label
@@ -377,5 +407,41 @@
         $("#hidLoc").val($(this).val());
       });
     </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const dropdownToggle = document.getElementById("notificationDropdown");
+
+        dropdownToggle.addEventListener("click", function () {
+          fetch("/notifications/fetch")
+            .then((res) => res.json())
+            .then((data) => {
+              const list = document.getElementById("notifList");
+              const count = document.getElementById("notifCount");
+
+              // Clear old list
+              list.innerHTML = "";
+
+              if (data.length === 0) {
+                list.innerHTML =
+                  "<li class='dropdown-item text-muted'>No new notifications</li>";
+              } else {
+                data.forEach((n) => {
+                  const li = document.createElement("li");
+                  li.classList.add("dropdown-item");
+                  li.textContent = n.message;
+                  list.appendChild(li);
+                });
+              }
+
+              count.textContent = data.length;
+            })
+            .catch((err) => {
+              console.error("Notification AJAX Error:", err);
+            });
+        });
+      });
+    </script>
+    <script src="/webjars/jquery/3.7.1/jquery.min.js"></script>
+    <script src="/webjars/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
   </body>
 </html>
