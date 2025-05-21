@@ -312,14 +312,12 @@
                 🔔 Notifications
                 <span id="notifCount" class="badge bg-danger ms-1">0</span>
               </a>
-
               <ul
                 class="dropdown-menu dropdown-menu-end"
                 aria-labelledby="notificationDropdown"
                 id="notifList"
               >
                 <li class="dropdown-item text-muted">Loading...</li>
-                <br />
                 <li
                   class="dropdown-item text-primary"
                   onclick="markAllAsRead()"
@@ -407,6 +405,7 @@
         $("#hidLoc").val($(this).val());
       });
     </script>
+
     <script>
       document.addEventListener("DOMContentLoaded", function () {
         const dropdownToggle = document.getElementById("notificationDropdown");
@@ -418,7 +417,65 @@
               const list = document.getElementById("notifList");
               const count = document.getElementById("notifCount");
 
-              // Clear old list
+              // Clear old content
+              list.innerHTML = "";
+
+              if (data.length === 0) {
+                list.innerHTML = `<li class='dropdown-item text-muted'>No new notifications</li>`;
+              } else {
+                data.forEach((n) => {
+                  const li = document.createElement("li");
+                  li.classList.add("dropdown-item");
+                  li.innerHTML = `
+                            <a href="/job-seeker-profile/${n.jobSeekerId}" onclick="deleteNotification(${n.id})">${n.message}</a>
+                        `;
+                  list.appendChild(li);
+                });
+
+                // ✅ Append the Mark All as Read option
+                const divider = document.createElement("li");
+                divider.innerHTML = "<hr class='dropdown-divider'>";
+                list.appendChild(divider);
+
+                const markAllLi = document.createElement("li");
+                markAllLi.innerHTML = `
+                        <a href="#" class="dropdown-item text-primary" onclick="markAllAsRead()">Mark all as read</a>
+                    `;
+                list.appendChild(markAllLi);
+              }
+
+              // Update count
+              count.textContent = data.length;
+            })
+            .catch((err) => {
+              console.error("Notification AJAX Error:", err);
+            });
+        });
+      });
+
+      function markAllAsRead() {
+        fetch("/notifications/mark-all-read", { method: "POST" })
+          .then(() => {
+            // Reload the bell UI immediately
+            document.getElementById(
+              "notifList"
+            ).innerHTML = `<li class='dropdown-item text-muted'>No new notifications</li>`;
+            document.getElementById("notifCount").textContent = "0";
+          })
+          .catch((err) => console.error("Mark all read failed", err));
+      }
+    </script>
+
+    <!-- <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const dropdownToggle = document.getElementById("notificationDropdown");
+
+        dropdownToggle.addEventListener("click", function () {
+          fetch("/notifications/fetch")
+            .then((res) => res.json())
+            .then((data) => {
+              const list = document.getElementById("notifList");
+              const count = document.getElementById("notifCount");
               list.innerHTML = "";
 
               if (data.length === 0) {
@@ -428,19 +485,30 @@
                 data.forEach((n) => {
                   const li = document.createElement("li");
                   li.classList.add("dropdown-item");
-                  li.textContent = n.message;
+                  li.innerHTML = `
+                            <a href="/job-seeker-profile/${n.jobSeekerId}" onclick="deleteNotification(${n.id})">${n.message}</a>
+                        `;
                   list.appendChild(li);
                 });
               }
-
               count.textContent = data.length;
-            })
-            .catch((err) => {
-              console.error("Notification AJAX Error:", err);
             });
         });
       });
-    </script>
+
+      function markAllAsRead() {
+        fetch("/notifications/mark-all-read", { method: "POST" }).then(() =>
+          location.reload()
+        );
+      }
+
+      function deleteNotification(id) {
+        fetch("/notifications/delete/" + id, {
+          method: "POST",
+        });
+      }
+    </script> -->
+
     <script src="/webjars/jquery/3.7.1/jquery.min.js"></script>
     <script src="/webjars/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
   </body>

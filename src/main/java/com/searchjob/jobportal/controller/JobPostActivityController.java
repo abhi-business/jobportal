@@ -135,7 +135,7 @@ public class JobPostActivityController {
                 RecruiterProfile recruiterProfile = (RecruiterProfile) currentUserProfile;
                 Users recruiterUser = recruiterProfile.getUserId();
                 // ✅ Add Notifications to model
-                List<Notification> notifications = notificationService.getUserNotifications(recruiterUser);
+                List<Notification> notifications = notificationService.getUnreadNotifications(recruiterUser);
                 model.addAttribute("notifications", notifications);
 
             } else {

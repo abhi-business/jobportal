@@ -1,5 +1,6 @@
 package com.searchjob.jobportal.service;
 
+import com.searchjob.jobportal.entity.JobSeekerProfile;
 import com.searchjob.jobportal.entity.Notification;
 import com.searchjob.jobportal.entity.Users;
 import com.searchjob.jobportal.repository.NotificationRepository;
@@ -14,26 +15,32 @@ public class NotificationService {
     @Autowired
     private NotificationRepository notificationRepository;
 
-    public void sendNotification(Users user, String message) {
+    public void sendNotification(Users recruiter, JobSeekerProfile candidate, String message) {
         Notification notification = new Notification();
-        notification.setUser(user);
+        notification.setUser(recruiter);
+        notification.setJobSeeker(candidate);
         notification.setMessage(message);
         notificationRepository.save(notification);
     }
 
-    public List<Notification> getUserNotifications(Users user) {
-        return notificationRepository.findByUserOrderByTimestampDesc(user);
+    public List<Notification> getUnreadNotifications(Users user) {
+        return notificationRepository.findByUserAndIsReadFalseOrderByTimestampDesc(user);
     }
 
-    public List<Notification> getUnreadNotifications(Users user) {
-        return notificationRepository.findByUserAndIsReadFalse(user);
+    public void markAsRead(Integer id) {
+        notificationRepository.findById(id).ifPresent(n -> {
+            n.setRead(true);
+            notificationRepository.save(n);
+        });
     }
 
     public void markAllAsRead(Users user) {
-        List<Notification> unread = notificationRepository.findByUserAndIsReadFalse(user);
-        for (Notification n : unread) {
-            n.setRead(true);
-        }
+        List<Notification> unread = getUnreadNotifications(user);
+        unread.forEach(n -> n.setRead(true));
         notificationRepository.saveAll(unread);
+    }
+
+    public void deleteNotificationById(Integer id) {
+        notificationRepository.deleteById(id);
     }
 }

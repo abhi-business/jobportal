@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import java.util.Date;
 
 @Entity
+@Table(name = "notification")
 public class Notification {
 
     @Id
@@ -11,8 +12,12 @@ public class Notification {
     private Integer id;
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id") // Recruiter
     private Users user;
+
+    @ManyToOne(optional = false)
+@JoinColumn(name = "job_seeker_id", nullable = false)
+private JobSeekerProfile jobSeeker;
 
     private String message;
 
@@ -35,6 +40,14 @@ public class Notification {
 
     public void setUser(Users user) {
         this.user = user;
+    }
+
+    public JobSeekerProfile getJobSeeker() {
+        return jobSeeker;
+    }
+
+    public void setJobSeeker(JobSeekerProfile jobSeeker) {
+        this.jobSeeker = jobSeeker;
     }
 
     public String getMessage() {

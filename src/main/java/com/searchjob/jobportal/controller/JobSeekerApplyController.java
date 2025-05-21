@@ -100,9 +100,16 @@ public class JobSeekerApplyController {
                 throw new RuntimeException("User not found");
             }
             jobSeekerApplyService.addNew(jobSeekerApply);
-            Users recruiter = jobPostActivity.getPostedById(); // Recruiter of the job
-            String msg = "A new candidate has applied for: " + jobPostActivity.getJobTitle();
-            notificationService.sendNotification(recruiter, msg);
+            Users recruiter = jobPostActivity.getPostedById();
+            // JobSeekerProfile seekerProfile =
+            JobSeekerProfile profile = seekerProfile.get(); // extract only once
+            String msg = profile.getFirstName() + " " + profile.getLastName() + " applied for: "
+                    + jobPostActivity.getJobTitle();
+            System.out.println("Recruiter ID: " + recruiter.getUserId());
+            System.out.println("Candidate Profile ID: " + profile.getUserAccountId());
+
+            notificationService.sendNotification(recruiter, seekerProfile.get(), msg);
+
         }
 
         return "redirect:/dashboard/";
