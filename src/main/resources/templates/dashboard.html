@@ -406,7 +406,7 @@
       });
     </script>
 
-    <script>
+    <!-- <script>
       document.addEventListener("DOMContentLoaded", function () {
         const dropdownToggle = document.getElementById("notificationDropdown");
 
@@ -464,9 +464,9 @@
           })
           .catch((err) => console.error("Mark all read failed", err));
       }
-    </script>
+    </script> -->
 
-    <!-- <script>
+    <script>
       document.addEventListener("DOMContentLoaded", function () {
         const dropdownToggle = document.getElementById("notificationDropdown");
 
@@ -490,6 +490,16 @@
                         `;
                   list.appendChild(li);
                 });
+                // ✅ Append the Mark All as Read option
+                const divider = document.createElement("li");
+                divider.innerHTML = "<hr class='dropdown-divider'>";
+                list.appendChild(divider);
+
+                const markAllLi = document.createElement("li");
+                markAllLi.innerHTML = `
+                        <a href="#" class="dropdown-item text-primary" onclick="markAllAsRead()">Mark all as read</a>
+                    `;
+                list.appendChild(markAllLi);
               }
               count.textContent = data.length;
             });
@@ -497,9 +507,15 @@
       });
 
       function markAllAsRead() {
-        fetch("/notifications/mark-all-read", { method: "POST" }).then(() =>
-          location.reload()
-        );
+        fetch("/notifications/mark-all-read", { method: "POST" })
+          .then(() => {
+            // Reload the bell UI immediately
+            document.getElementById(
+              "notifList"
+            ).innerHTML = `<li class='dropdown-item text-muted'>No new notifications</li>`;
+            document.getElementById("notifCount").textContent = "0";
+          })
+          .catch((err) => console.error("Mark all read failed", err));
       }
 
       function deleteNotification(id) {
@@ -507,7 +523,7 @@
           method: "POST",
         });
       }
-    </script> -->
+    </script>
 
     <script src="/webjars/jquery/3.7.1/jquery.min.js"></script>
     <script src="/webjars/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
